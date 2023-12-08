@@ -23,11 +23,12 @@ end
 
 local function plenary_change(_cmd)
 	local cmd = split_command(_cmd)
-	local job = require("plenary.job")
-	job:new({
-		command = cmd[1],
-		args = vim.list_slice(cmd, 2, #cmd),
-	}):start()
+	M.job
+		:new({
+			command = cmd[1],
+			args = vim.list_slice(cmd, 2, #cmd),
+		})
+		:start()
 end
 
 local function system_change(_cmd)
@@ -36,24 +37,11 @@ end
 
 local function change_ime(ime)
 	local cmd = M.config.im_select_path .. " " .. ime
-	plenary_change(cmd)
+	M.change_ime(cmd)
 end
 
 function M.make_ime_default()
-	-- M.pre_im = vim.trim(vim.fn.system(M.config.im_select_path) or M.pre_im)
-	local job = require("plenary.job")
-	job:new({
-		command = M.config.im_select_path,
-		-- args = vim.list_slice(cmd, 2, #cmd),
-		on_exit = function(j, exit_code)
-			if exit_code ~= 0 then
-				vim.warn("im-select exits with some errors")
-				return
-			end
-			M.pre_im = vim.trim(j:result()[1] or M.pre_im)
-		end,
-	}):sync()
-
+	M.require_current()
 	if not M.config.smartim_enabled or M.pre_im == M.default_im then
 		return
 	end
@@ -90,6 +78,32 @@ local function create_autocmd()
 end
 
 function M.setup(opts)
+	local status, _ = pcall(require, "plenary")
+	if status then
+		M.job = require("plenary.job")
+		M.change_ime = plenary_change
+		M.require_current = function()
+			M.job
+				:new({
+					command = M.config.im_select_path,
+					-- args = vim.list_slice(cmd, 2, #cmd),
+					on_exit = function(j, exit_code)
+						if exit_code ~= 0 then
+							vim.warn("im-select exits with some errors")
+							return
+						end
+						M.pre_im = vim.trim(j:result()[1] or M.pre_im)
+					end,
+				})
+				:sync()
+		end
+	else
+		M.change_ime = system_change
+		M.require_current = function()
+			M.pre_im = vim.trim(vim.fn.system(M.config.im_select_path) or M.pre_im)
+		end
+	end
+
 	M.config = vim.tbl_deep_extend("keep", opts, M.config)
 	if vim.fn.executable(M.config.im_select_path) ~= 1 then
 		vim.notify("im-select path is not executable\nsmartim.nvim diasbled", vim.log.levels.WARN)
