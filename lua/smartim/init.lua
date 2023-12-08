@@ -25,9 +25,7 @@ function M.make_ime_default()
 	end
 
 	if M.config._notice then
-		vim.notify(M.pre_im)
-		vim.notify(M.default_im)
-		vim.notify("default_im is " .. M.pre_im)
+		vim.notify("change to default ime " .. M.default_im)
 	end
 	change_ime(M.default_im)
 end
@@ -35,6 +33,10 @@ end
 function M.make_ime_previous()
 	if not M.config.smartim_enabled or M.pre_im == M.default_im then
 		return
+	end
+
+	if M.config._notice then
+		vim.notify("change to previous ime " .. M.pre_im)
 	end
 
 	change_ime(M.pre_im)
