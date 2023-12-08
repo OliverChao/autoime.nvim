@@ -3,7 +3,7 @@ local config = {
 	smartim_enabled = true,
 	default_im = "com.apple.keylayout.ABC",
 	async_if_able = true,
-	_notice = true,
+	_notice = false,
 }
 
 return config
