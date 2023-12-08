@@ -1,16 +1,16 @@
 local M = {}
 
-M.config = require("smartim.config")
+M.config = require("autoime.config")
 
-function M.enable_smartim()
-	M.config.smartim_enabled = true
+function M.enable_autoime()
+	M.config.autoime_enabled = true
 end
 
 function M.disable_samrtim()
-	M.config.smartim_enabled = false
+	M.config.autoime_enabled = false
 end
-function M.toggle_smartim()
-	M.config.smartim_enabled = not M.config.smartim_enabled
+function M.toggle_autoime()
+	M.config.autoime_enabled = not M.config.autoime_enabled
 end
 
 local split_command = function(command)
@@ -41,7 +41,7 @@ local function change_ime(ime)
 end
 
 function M.make_ime_default()
-	if not M.config.smartim_enabled then
+	if not M.config.autoime_enabled then
 		return
 	end
 
@@ -57,7 +57,7 @@ function M.make_ime_default()
 end
 
 function M.make_ime_previous()
-	if not M.config.smartim_enabled or M.pre_im == M.default_im then
+	if not M.config.autoime_enabled or M.pre_im == M.default_im then
 		return
 	end
 
@@ -84,8 +84,8 @@ end
 function M.setup(opts)
 	M.config = vim.tbl_deep_extend("keep", opts, M.config)
 	if vim.fn.executable(M.config.im_select_path) ~= 1 then
-		vim.notify("im-select path is not executable\nsmartim.nvim diasbled", vim.log.levels.WARN)
-		M.config.smartim_enabled = false
+		vim.notify("im-select path is not executable\nautoime.nvim diasbled", vim.log.levels.WARN)
+		M.config.autoime_enabled = false
 	end
 
 	local status, _ = pcall(require, "plenary")
