@@ -41,8 +41,12 @@ local function change_ime(ime)
 end
 
 function M.make_ime_default()
+	if not M.config.smartim_enabled then
+		return
+	end
+
 	M.require_current()
-	if not M.config.smartim_enabled or M.pre_im == M.default_im then
+	if M.pre_im == M.default_im then
 		return
 	end
 
@@ -78,11 +82,18 @@ local function create_autocmd()
 end
 
 function M.setup(opts)
+	M.config = vim.tbl_deep_extend("keep", opts, M.config)
+	if vim.fn.executable(M.config.im_select_path) ~= 1 then
+		vim.notify("im-select path is not executable\nsmartim.nvim diasbled", vim.log.levels.WARN)
+		M.config.smartim_enabled = false
+	end
+
 	local status, _ = pcall(require, "plenary")
-	if status then
+	if M.config.async_if_able and status then
 		M.job = require("plenary.job")
 		M.change_ime = plenary_change
 		M.require_current = function()
+			vim.notify("plenary require current")
 			M.job
 				:new({
 					command = M.config.im_select_path,
@@ -100,15 +111,11 @@ function M.setup(opts)
 	else
 		M.change_ime = system_change
 		M.require_current = function()
+			vim.notify("system require current")
 			M.pre_im = vim.trim(vim.fn.system(M.config.im_select_path) or M.pre_im)
 		end
 	end
 
-	M.config = vim.tbl_deep_extend("keep", opts, M.config)
-	if vim.fn.executable(M.config.im_select_path) ~= 1 then
-		vim.notify("im-select path is not executable\nsmartim.nvim diasbled", vim.log.levels.WARN)
-		M.config.smartim_enabled = false
-	end
 	M.default_im = M.config.default_im
 	M.pre_im = M.default_im
 	create_autocmd()
