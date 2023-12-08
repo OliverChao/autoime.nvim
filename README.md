@@ -10,8 +10,10 @@ https://github.com/OliverChao/autoime.nvim/assets/39361033/fbdc2186-a454-4cf9-b7
 
 # Notice
 This plugin is only test on `MacOS`.
-In theory, it applys to any platform which `im-select` supports(Linux, MaxOS, Windows).
-But it is needed more test in other platforms.
+And it is optimised for `Mac` for my hobby.
+
+In theory, it applys to any platform which `im-select` supports(MaxOS, Windows).
+If you use Linux, use [`ime-select.nvim`](https://github.com/keaising/im-select.nvim).
 
 If you have any problems, please start an issue.
 
@@ -39,6 +41,7 @@ If `im-select` is execuable directly, you needn't set `im_select_path`.
 # License
 The MIT License (MIT)
 
-# Thanks
-[`smartim`](https://github.com/ybian/smartim)
-[`vim-barbaric`](https://github.com/rlue/vim-barbaric)
+# Related work
+1. [`smartim`](https://github.com/ybian/smartim)
+2. [`vim-barbaric`](https://github.com/rlue/vim-barbaric)
+3. [`im-select.nvim`](https://github.com/keaising/im-select.nvim)
