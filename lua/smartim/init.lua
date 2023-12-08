@@ -55,6 +55,10 @@ end
 
 function M.setup(opts)
 	M.config = vim.tbl_deep_extend("keep", opts, M.config)
+	if vim.fn.executable(M.config.im_select_path) ~= 1 then
+		vim.notify("im-select path is not executable\nsmartim.nvim diasbled", vim.log.levels.WARN)
+		M.config.smartim_enabled = false
+	end
 	M.default_im = M.config.default_im
 	M.pre_im = M.default_im
 	create_autocmd()
