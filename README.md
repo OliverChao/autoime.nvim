@@ -4,6 +4,10 @@ This is useful for some non-latin languages like Chinese.
 Sometimes we need write non-latin charactors in insert mode and want ime auto-changes to latin while entering the normal mode.
 This is the solution used [`im-select`](https://github.com/daipeihust/im-select).
 
+
+https://github.com/OliverChao/autoime.nvim/assets/39361033/fbdc2186-a454-4cf9-b7ef-3c2ada530ed8
+
+
 # Notice
 This plugin is only test on `MacOS`.
 In theory, it applys to any platform which `im-select` supports(Linux, MaxOS, Windows).
