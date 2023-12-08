@@ -13,13 +13,47 @@ function M.toggle_smartim()
 	M.config.smartim_enabled = not M.config.smartim_enabled
 end
 
+local split_command = function(command)
+	local cmd = {}
+	for word in command:gmatch("%S+") do
+		table.insert(cmd, word)
+	end
+	return cmd
+end
+
+local function plenary_change(_cmd)
+	local cmd = split_command(_cmd)
+	local job = require("plenary.job")
+	job:new({
+		command = cmd[1],
+		args = vim.list_slice(cmd, 2, #cmd),
+	}):start()
+end
+
+local function system_change(_cmd)
+	vim.fn.system(_cmd)
+end
+
 local function change_ime(ime)
-	local name = M.config.im_select_path .. " " .. ime
-	vim.fn.system(name)
+	local cmd = M.config.im_select_path .. " " .. ime
+	plenary_change(cmd)
 end
 
 function M.make_ime_default()
-	M.pre_im = vim.trim(vim.fn.system(M.config.im_select_path) or M.pre_im)
+	-- M.pre_im = vim.trim(vim.fn.system(M.config.im_select_path) or M.pre_im)
+	local job = require("plenary.job")
+	job:new({
+		command = M.config.im_select_path,
+		-- args = vim.list_slice(cmd, 2, #cmd),
+		on_exit = function(j, exit_code)
+			if exit_code ~= 0 then
+				vim.warn("im-select exits with some errors")
+				return
+			end
+			M.pre_im = vim.trim(j:result()[1] or M.pre_im)
+		end,
+	}):sync()
+
 	if not M.config.smartim_enabled or M.pre_im == M.default_im then
 		return
 	end
