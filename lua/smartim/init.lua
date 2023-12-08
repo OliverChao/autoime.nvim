@@ -93,7 +93,6 @@ function M.setup(opts)
 		M.job = require("plenary.job")
 		M.change_ime = plenary_change
 		M.require_current = function()
-			vim.notify("plenary require current")
 			M.job
 				:new({
 					command = M.config.im_select_path,
@@ -111,7 +110,6 @@ function M.setup(opts)
 	else
 		M.change_ime = system_change
 		M.require_current = function()
-			vim.notify("system require current")
 			M.pre_im = vim.trim(vim.fn.system(M.config.im_select_path) or M.pre_im)
 		end
 	end
