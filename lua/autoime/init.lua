@@ -1,121 +1,112 @@
-local M = {}
+local defaults = require("autoime.config")
+local Controller = require("autoime.controller")
+local M = { config = vim.deepcopy(defaults) }
 
-M.config = require("autoime.config")
+local function notify(message, level)
+	pcall(vim.notify, "autoime.nvim: " .. message, level)
+end
+
+local function close()
+	if M._controller then
+		M._controller:close()
+		M._controller = nil
+	end
+end
+
+local function start()
+	close()
+	M.default_im = M.config.default_im
+	M.pre_im = M.default_im
+	if vim.fn.executable(M.config.im_select_path) ~= 1 then
+		M.config.autoime_enabled = false
+		if M.config.notify_on_error then
+			notify("im-select path is not executable; automation disabled", vim.log.levels.WARN)
+		end
+		return
+	end
+	M._controller = Controller.new(M.config, {
+		previous = function(input)
+			M.pre_im = input
+		end,
+		error = function(message)
+			if M.config.notify_on_error then
+				notify(message, vim.log.levels.WARN)
+			end
+		end,
+		changed = function(input)
+			if M.config._notice then
+				notify("changed input method to " .. input, vim.log.levels.INFO)
+			end
+		end,
+	})
+end
 
 function M.enable_autoime()
-	M.config.autoime_enabled = true
-end
-
-function M.disable_samrtim()
-	M.config.autoime_enabled = false
-end
-function M.toggle_autoime()
-	M.config.autoime_enabled = not M.config.autoime_enabled
-end
-
-local split_command = function(command)
-	local cmd = {}
-	for word in command:gmatch("%S+") do
-		table.insert(cmd, word)
+	if M.config.autoime_enabled and M._controller then
+		return
 	end
-	return cmd
+	M.config.autoime_enabled = true
+	start()
 end
 
-local function plenary_change(_cmd)
-	local cmd = split_command(_cmd)
-	M.job
-		:new({
-			command = cmd[1],
-			args = vim.list_slice(cmd, 2, #cmd),
-		})
-		:start()
+function M.disable_autoime()
+	M.config.autoime_enabled = false
+	close()
 end
 
-local function system_change(_cmd)
-	vim.fn.system(_cmd)
-end
+-- Keep the original misspelled public function as a compatibility alias.
+M.disable_samrtim = M.disable_autoime
 
-local function change_ime(ime)
-	local cmd = M.config.im_select_path .. " " .. ime
-	M.change_ime(cmd)
+function M.toggle_autoime()
+	if M.config.autoime_enabled then
+		M.disable_autoime()
+	else
+		M.enable_autoime()
+	end
 end
 
 function M.make_ime_default()
-	if not M.config.autoime_enabled then
-		return
+	if M.config.autoime_enabled and M._controller then
+		M._controller:request("normal")
 	end
-
-	M.require_current()
-	if M.pre_im == M.default_im then
-		return
-	end
-
-	if M.config._notice then
-		vim.notify("change to default ime " .. M.default_im)
-	end
-	change_ime(M.default_im)
 end
 
 function M.make_ime_previous()
-	if not M.config.autoime_enabled or M.pre_im == M.default_im then
-		return
+	if M.config.autoime_enabled and M._controller then
+		M._controller:request("insert")
 	end
-
-	if M.config._notice then
-		vim.notify("change to previous ime " .. M.pre_im)
-	end
-
-	change_ime(M.pre_im)
-end
-
-local function create_autocmd()
-	vim.api.nvim_create_autocmd("InsertLeave", {
-		callback = function()
-			M.make_ime_default()
-		end,
-	})
-	vim.api.nvim_create_autocmd("InsertEnter", {
-		callback = function()
-			M.make_ime_previous()
-		end,
-	})
 end
 
 function M.setup(opts)
-	M.config = vim.tbl_deep_extend("keep", opts, M.config)
-	if vim.fn.executable(M.config.im_select_path) ~= 1 then
-		vim.notify("im-select path is not executable\nautoime.nvim diasbled", vim.log.levels.WARN)
-		M.config.autoime_enabled = false
+	assert(opts == nil or type(opts) == "table", "autoime.nvim: opts must be a table")
+	local config = vim.tbl_deep_extend("force", {}, defaults, opts or {})
+	for _, key in ipairs({ "im_select_path", "default_im" }) do
+		assert(
+			type(config[key]) == "string" and config[key] ~= "" and not config[key]:find("%z"),
+			"autoime.nvim: invalid " .. key
+		)
 	end
-
-	local status, _ = pcall(require, "plenary")
-	if M.config.async_if_able and status then
-		M.job = require("plenary.job")
-		M.change_ime = plenary_change
-		M.require_current = function()
-			M.job
-				:new({
-					command = M.config.im_select_path,
-					-- args = vim.list_slice(cmd, 2, #cmd),
-					on_exit = function(j, exit_code)
-						if exit_code ~= 0 then
-							vim.warn("im-select exits with some errors")
-							return
-						end
-						M.pre_im = vim.trim(j:result()[1] or M.pre_im)
-					end,
-				})
-				:sync()
-		end
-	else
-		M.change_ime = system_change
-		M.require_current = function()
-			M.pre_im = vim.trim(vim.fn.system(M.config.im_select_path) or M.pre_im)
-		end
+	for _, key in ipairs({ "autoime_enabled", "async_if_able", "notify_on_error", "_notice" }) do
+		assert(type(config[key]) == "boolean", "autoime.nvim: " .. key .. " must be a boolean")
 	end
-
-	M.default_im = M.config.default_im
+	assert(
+		type(config.timeout_ms) == "number"
+			and config.timeout_ms > 0
+			and config.timeout_ms < math.huge
+			and config.timeout_ms == math.floor(config.timeout_ms),
+		"autoime.nvim: timeout_ms must be a positive integer"
+	)
+	close()
+	M.config = config
+	M.default_im = config.default_im
 	M.pre_im = M.default_im
-	create_autocmd()
+	local group = vim.api.nvim_create_augroup("Autoime", { clear = true })
+	vim.api.nvim_create_autocmd("InsertLeave", { group = group, callback = M.make_ime_default })
+	vim.api.nvim_create_autocmd("InsertEnter", { group = group, callback = M.make_ime_previous })
+	vim.api.nvim_create_autocmd("VimLeavePre", { group = group, callback = M.disable_autoime })
+	if config.autoime_enabled then
+		start()
+	end
 end
+
 return M
